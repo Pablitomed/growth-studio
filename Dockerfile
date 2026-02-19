@@ -1,5 +1,4 @@
 # Growth Studio - Dockerfile para Coolify
-# Build cache bust: 2026-02-19-v2
 FROM oven/bun:1.3.4-alpine AS base
 
 # Instalar dependências necessárias
@@ -25,6 +24,10 @@ RUN bunx prisma --version && bunx prisma generate
 # Estágio de build
 FROM base AS builder
 WORKDIR /app
+
+# ARG para invalidar cache - mude este valor para forçar rebuild total
+ARG CACHE_BUST=2026-02-19-v3
+RUN echo "Build cache bust: $CACHE_BUST"
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
