@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import prisma from '@/lib/db';
 
 // POST /api/webhooks/n8n/inbound - Recebe dados do N8N
 export async function POST(request: NextRequest) {
