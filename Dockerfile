@@ -2,18 +2,21 @@
 FROM oven/bun:1.3.4-alpine AS base
 
 # Instalar dependências necessárias
-RUN apk add --no-cache curl
+RUN apk add --no-cache curl openssl sqlite
 
 # Estágio de dependências
 FROM base AS deps
 WORKDIR /app
 
 # Copiar arquivos de dependências
-COPY package.json bun.lock* ./
+COPY package.json bun.lock ./
 COPY prisma ./prisma/
 
-# Instalar dependências
-RUN bun install --frozen-lockfile
+# Limpar cache e instalar dependências
+RUN rm -rf node_modules && bun install
+
+# Verificar versão do Prisma
+RUN bunx prisma --version
 
 # Gerar Prisma Client
 RUN bunx prisma generate
@@ -35,6 +38,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV DATABASE_URL=file:/app/data/growth-studio.db
 
 # Criar usuário não-root
 RUN addgroup --system --gid 1001 nodejs
@@ -61,5 +65,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Script de inicialização
-CMD ["sh", "-c", "bunx prisma migrate deploy && node server.js"]
+# Inicializar banco e iniciar servidor
+CMD ["sh", "-c", "cd /app && npx prisma db push --skip-generate && node server.js"]
