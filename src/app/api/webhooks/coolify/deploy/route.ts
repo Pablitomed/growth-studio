@@ -1,7 +1,6 @@
+import prisma from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
 
 // Token de verificação para webhooks do Coolify
 const WEBHOOK_SECRET = process.env.COOLIFY_WEBHOOK_SECRET || 'growth-studio-webhook';

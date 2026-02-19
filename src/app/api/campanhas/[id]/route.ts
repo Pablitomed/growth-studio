@@ -1,7 +1,6 @@
+import prisma from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
 
 // GET /api/campanhas/[id] - Busca campanha por ID
 export async function GET(

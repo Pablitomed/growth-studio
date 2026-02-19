@@ -1,4 +1,6 @@
+import prisma from '@/lib/db';
 import { NextResponse } from 'next/server';
+import prisma from '@/lib/db';
 import fs from 'fs';
 
 export async function GET() {
@@ -37,7 +39,6 @@ export async function GET() {
   // Try Prisma connection
   try {
     const { PrismaClient } = await import('@prisma/client');
-    const prisma = new PrismaClient();
     await prisma.$connect();
     diagnostics.prismaConnected = true;
     

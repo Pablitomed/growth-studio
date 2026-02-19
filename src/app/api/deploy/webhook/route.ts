@@ -1,7 +1,6 @@
+import prisma from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
 
 // API Key para autenticação de deploy
 const DEPLOY_API_KEY = process.env.DEPLOY_API_KEY || 'growth-studio-deploy-key-2024';

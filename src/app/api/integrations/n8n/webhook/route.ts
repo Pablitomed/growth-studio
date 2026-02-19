@@ -1,7 +1,6 @@
+import prisma from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
 
 // API Key para autenticação N8N (em produção, usar variável de ambiente)
 const N8N_API_KEY = process.env.N8N_API_KEY || 'growth-studio-n8n-key-2024';

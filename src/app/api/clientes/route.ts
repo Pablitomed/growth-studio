@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/db';
 
 // GET /api/clientes - Lista todos os clientes
 export async function GET() {
@@ -52,6 +50,8 @@ export async function POST(request: NextRequest) {
   try {
     const data = await request.json();
     
+    console.log('[API Clientes] Criando cliente:', data.nome);
+    
     const cliente = await prisma.cliente.create({
       data: {
         nome: data.nome,
@@ -69,38 +69,54 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    console.log('[API Clientes] Cliente criado:', cliente.id);
+
     // Criar tier de serviço padrão (assistivo)
-    await prisma.tierServico.create({
-      data: {
-        clienteId: cliente.id,
-        tier: data.tier || 'assistivo',
-        valorMensal: data.tier === 'orchestrado' ? 2497 : 
-                     data.tier === 'agentic' ? 4997 : 
-                     data.tier === 'autonomo' ? 9977 : 997,
-        cicloInicio: new Date(),
-        cicloFim: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      }
-    });
+    try {
+      await prisma.tierServico.create({
+        data: {
+          clienteId: cliente.id,
+          tier: data.tier || 'assistivo',
+          valorMensal: data.tier === 'orchestrado' ? 2497 : 
+                       data.tier === 'agentic' ? 4997 : 
+                       data.tier === 'autonomo' ? 9977 : 997,
+          cicloInicio: new Date(),
+          cicloFim: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        }
+      });
+    } catch (tierError) {
+      console.error('[API Clientes] Erro ao criar tier:', tierError);
+      // Continua mesmo sem tier
+    }
 
     // Log do agente orquestrador
-    await prisma.logAgente.create({
-      data: {
-        clienteId: cliente.id,
-        agente: 'orchestrator',
-        tarefa: 'criacao_cliente',
-        entrada: data,
-        saida: cliente,
-        status: 'concluido',
-        iniciadoEm: new Date(),
-        concluidoEm: new Date(),
-        duracao: 0,
-      }
-    });
+    try {
+      await prisma.logAgente.create({
+        data: {
+          clienteId: cliente.id,
+          agente: 'orchestrator',
+          tarefa: 'criacao_cliente',
+          entrada: data,
+          saida: cliente,
+          status: 'concluido',
+          iniciadoEm: new Date(),
+          concluidoEm: new Date(),
+          duracao: 0,
+        }
+      });
+    } catch (logError) {
+      console.error('[API Clientes] Erro ao criar log:', logError);
+      // Continua mesmo sem log
+    }
 
     return NextResponse.json({ cliente });
-  } catch (error) {
-    console.error('Erro ao criar cliente:', error);
-    return NextResponse.json({ error: 'Erro ao criar cliente' }, { status: 500 });
+  } catch (error: any) {
+    console.error('[API Clientes] Erro completo:', error);
+    return NextResponse.json({ 
+      error: 'Erro ao criar cliente', 
+      details: error.message,
+      code: error.code 
+    }, { status: 500 });
   }
 }
 
