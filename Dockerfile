@@ -8,6 +8,9 @@ RUN apk add --no-cache curl openssl sqlite
 FROM base AS deps
 WORKDIR /app
 
+# Definir DATABASE_URL para o build
+ENV DATABASE_URL=file:/app/data/growth-studio.db
+
 # Copiar arquivos de dependências
 COPY package.json bun.lock ./
 COPY prisma ./prisma/
