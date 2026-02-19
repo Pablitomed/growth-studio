@@ -12,14 +12,11 @@ WORKDIR /app
 COPY package.json bun.lock ./
 COPY prisma ./prisma/
 
-# Limpar cache e instalar dependências
-RUN rm -rf node_modules && bun install
+# Instalar dependências
+RUN bun install
 
-# Verificar versão do Prisma
-RUN bunx prisma --version
-
-# Gerar Prisma Client
-RUN bunx prisma generate
+# Verificar versão do Prisma e gerar client
+RUN bunx prisma --version && bunx prisma generate
 
 # Estágio de build
 FROM base AS builder
@@ -50,10 +47,8 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 
-# Copiar node_modules para Prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+# Copiar node_modules para Prisma e bun
+COPY --from=builder /app/node_modules ./node_modules
 
 # Criar diretório de dados
 RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data
@@ -65,5 +60,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Inicializar banco e iniciar servidor
-CMD ["sh", "-c", "cd /app && npx prisma db push --skip-generate && node server.js"]
+# Inicializar banco e iniciar servidor com bun
+CMD ["sh", "-c", "cd /app && bunx prisma db push --skip-generate && bun server.js"]
