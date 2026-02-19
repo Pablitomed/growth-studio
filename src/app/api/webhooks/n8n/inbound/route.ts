@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import prisma from '@/lib/prisma';
 
 // POST /api/webhooks/n8n/inbound - Recebe dados do N8N
 export async function POST(request: NextRequest) {
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     switch (event) {
       case 'metrics.update':
         // Atualiza métricas de uma campanha
-        resultado = await db.resultado.create({
+        resultado = await prisma.resultado.create({
           data: {
             clienteId,
             campanhaId: data.campanhaId,
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
 
       case 'campaign.create':
         // Cria nova campanha
-        resultado = await db.campanha.create({
+        resultado = await prisma.campanha.create({
           data: {
             clienteId,
             nome: data.nome,
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
       case 'content.create':
         // Cria novo conteúdo
-        resultado = await db.conteudo.create({
+        resultado = await prisma.conteudo.create({
           data: {
             clienteId,
             campanhaId: data.campanhaId,
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
 
       case 'decision.create':
         // Cria nova decisão HITL
-        resultado = await db.decisaoHITL.create({
+        resultado = await prisma.decisaoHITL.create({
           data: {
             clienteId,
             campanhaId: data.campanhaId,
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
 
       case 'icp.update':
         // Atualiza ICP do cliente
-        resultado = await db.cliente.update({
+        resultado = await prisma.cliente.update({
           where: { id: clienteId },
           data: {
             icp: data.icp,
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Log do webhook
-    await db.webhookN8N.updateMany({
+    await prisma.webhookN8N.updateMany({
       where: { tipo: 'entrada', ativo: true },
       data: { ultimoDisparo: new Date() }
     }).catch(() => {});
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
 // GET /api/webhooks/n8n/inbound - Lista webhooks configurados
 export async function GET() {
   try {
-    const webhooks = await db.webhookN8N.findMany({
+    const webhooks = await prisma.webhookN8N.findMany({
       where: { tipo: 'entrada' }
     });
 
