@@ -50,8 +50,11 @@ COPY --from=builder /app/prisma ./prisma
 # Copiar node_modules para Prisma e bun
 COPY --from=builder /app/node_modules ./node_modules
 
-# Criar diretório de dados
-RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data
+# Criar diretório de dados e inicializar banco DURANTE O BUILD (como root)
+RUN mkdir -p /app/data && \
+    DATABASE_URL=file:/app/data/growth-studio.db bunx prisma db push --skip-generate && \
+    chown -R nextjs:nodejs /app/data && \
+    chmod -R 775 /app/data
 
 USER nextjs
 
@@ -60,5 +63,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Inicializar banco e iniciar servidor com bun
-CMD ["sh", "-c", "cd /app && bunx prisma db push --skip-generate && bun server.js"]
+# Apenas iniciar servidor (banco já foi criado no build)
+CMD ["bun", "server.js"]

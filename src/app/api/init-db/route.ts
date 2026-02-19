@@ -14,7 +14,7 @@ export async function POST() {
     }
 
     // Run prisma db push
-    const { stdout, stderr } = await execAsync('npx prisma db push --skip-generate', {
+    const { stdout, stderr } = await execAsync('bunx prisma db push --skip-generate', {
       cwd: '/app',
       env: {
         ...process.env,
