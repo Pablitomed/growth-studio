@@ -1,0 +1,266 @@
+// Growth Studio - Schema Expandido para 2026
+// Adiciona: GEO, PROIM, 15 Agentes, Prontidão Emocional, Tiers
+
+// ============================================
+// GEO - GENERATIVE ENGINE OPTIMIZATION
+// ============================================
+model GEOMetrics {
+  id              String   @id @default(cuid())
+  clienteId       String
+  cliente         Cliente  @relation(fields: [clienteId], references: [id])
+  
+  // Share of Model
+  shareOfModel    Float?   // Porcentagem de citações
+  totalCitacoes   Int?
+  minhasCitacoes  Int?
+  
+  // Por plataforma
+  chatGPT         Float?   // % de citações
+  perplexity      Float?
+  gemini          Float?
+  claude          Float?
+  
+  // Densidade de Fatos
+  densidadeScore  Float?   // 0-100
+  informationGain Float?   // Ganho de informação
+  
+  // Agregadores
+  g2Score         Float?
+  redditMentions  Int?
+  quoraMentions   Int?
+  
+  // Data
+  dataMedicao     DateTime @default(now())
+  createdAt       DateTime @default(now())
+  
+  @@map("geo_metrics")
+}
+
+// ============================================
+// PROIM - PREDICTIVE ROI MODEL
+// ============================================
+model PROIMMetrics {
+  id              String   @id @default(cuid())
+  clienteId       String
+  cliente         Cliente  @relation(fields: [clienteId], references: [id])
+  campanhaId      String?
+  
+  // Micro-sinais comportamentais
+  scrollDepth     Float?   // Profundidade média de rolagem
+  hoverTime       Float?   // Tempo médio de permanência
+  recorrência     Int?     // Visualizações recorrentes
+  interacaoTools  Int?     // Uso de ferramentas interativas
+  
+  // Prontidão emocional
+  prontidaoScore  Float?   // 0-100
+  frustracaoCount Int?     // Usuários frustrados
+  ansiedadeCount  Int?     // Ansiedade pré-compra
+  engajamentoAlto Int?     // Alta intenção
+  
+  // Contexto
+  climaLocal      String?
+  horaDia         Int?
+  diaSemana       Int?
+  
+  // Previsão
+  probabilidadeConv Float? // % de probabilidade
+  conversoesEstim   Int?   // Conversões estimadas
+  roiEstimado       Float? // ROI previsto
+  
+  // Aprendizado
+  previsaoCorreta  Boolean?
+  diferencaReal    Float?
+  
+  dataMedicao     DateTime @default(now())
+  createdAt       DateTime @default(now())
+  
+  @@map("proim_metrics")
+}
+
+// ============================================
+// AGENTES ESPECIALIZADOS (15 agentes)
+// ============================================
+model AgenteExecucao {
+  id              String   @id @default(cuid())
+  clienteId       String?
+  cliente         Cliente? @relation(fields: [clienteId], references: [id])
+  
+  // Identificação
+  agenteTipo      String   // 15 tipos: campaign_orchestrator, intent_intelligence, etc.
+  nomeAgente      String
+  
+  // Tarefa
+  tarefa          String
+  descricao       String?
+  entrada         Json?
+  saida           Json?
+  
+  // Status
+  status          String   @default("pendente") // pendente, executando, concluido, erro
+  progresso       Int?     @default(0) // 0-100
+  
+  // Timing
+  iniciadoEm      DateTime?
+  concluidoEm     DateTime?
+  duracao         Int?     // ms
+  
+  // Custos
+  tokensUsados    Int?
+  custoEstimado   Float?
+  
+  // Qualidade
+  scoreQualidade  Float?   // 0-100
+  feedbackHumano  String?
+  
+  // HITL
+  requerAprovacao Boolean  @default(false)
+  aprovadoPor     String?
+  aprovadoEm      DateTime?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@map("agente_execucoes")
+}
+
+// ============================================
+// PRONTIDÃO EMOCIONAL
+// ============================================
+model ProntidaoEmocional {
+  id              String   @id @default(cuid())
+  clienteId       String
+  cliente         Cliente  @relation(fields: [clienteId], references: [id])
+  
+  // Identificação do usuário
+  sessionId       String?
+  usuarioId       String?
+  
+  // Sinais comportamentais
+  scrollDepth     Float?
+  hoverTime       Float?
+  paginasVisitadas Int?
+  tempoTotal      Float?   // segundos
+  
+  // Análise de sentimento
+  sentimento      String?  // frustrado, ansioso, engajado, neutro
+  confiancaSent   Float?   // 0-100
+  
+  // Contexto
+  fonte           String?  // chat, site, email, social
+  dispositivo     String?  // mobile, desktop
+  
+  // Prontidão
+  nivelProntidao  String?  // baixo, medio, alto, critico
+  scoreProntidao  Float?   // 0-100
+  
+  // Ação recomendada
+  acaoRecomendada String?
+  acaoExecutada   Boolean  @default(false)
+  
+  createdAt       DateTime @default(now())
+  
+  @@map("prontidao_emocional")
+}
+
+// ============================================
+// TIERS DE SERVIÇO
+// ============================================
+model TierServico {
+  id              String   @id @default(cuid())
+  clienteId       String
+  cliente         Cliente  @relation(fields: [clienteId], references: [id])
+  
+  // Tier
+  tier            String   // assistivo, orchestrado, agentic, autonomo
+  
+  // Limites
+  agentesDisponiveis Json?  // Lista de agentes liberados
+  decisoesHITLSemana Int?  // Decisões por semana
+  relatoriosMes   Int?
+  
+  // Features
+  geo             Boolean  @default(false)
+  proim           Boolean  @default(false)
+  chatIA         Boolean  @default(false)
+  apiAcesso       Boolean  @default(false)
+  
+  // Billing
+  valorMensal     Float?
+  cicloInicio     DateTime?
+  cicloFim        DateTime?
+  status          String   @default("ativo")
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@map("tier_servico")
+}
+
+// ============================================
+// CONTEÚDO GEO (Otimizado para IA)
+// ============================================
+model ConteudoGEO {
+  id              String   @id @default(cuid())
+  clienteId       String
+  cliente         Cliente  @relation(fields: [clienteId], references: [id])
+  
+  // Tipo
+  tipo            String   // artigo, faq, definicao, comparativo
+  
+  // Conteúdo
+  titulo          String
+  conteudo        String
+  
+  // Otimização GEO
+  densidadeFatos  Int?     // Contagem de fatos
+  citacoesAutoridade Int?  // Citações de fontes
+  estatisticas    Int?     // Números concretos
+  termosTecnicos  Int?     // Termos técnicos
+  
+  // Score
+  geoScore        Float?   // 0-100
+  citavel         Boolean  @default(false)
+  
+  // Performance
+  vezesCitado     Int?     // Vezes citado por IAs
+  ultimaCitação   DateTime?
+  
+  // Status
+  status          String   @default("rascunho")
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@map("conteudo_geo")
+}
+
+// ============================================
+// INSIGHTS DOS AGENTES
+// ============================================
+model InsightAgente {
+  id              String   @id @default(cuid())
+  clienteId       String
+  cliente         Cliente  @relation(fields: [clienteId], references: [id])
+  agenteExecucaoId String?
+  
+  // Insight
+  tipo            String   // recomendacao, alerta, oportunidade, risco
+  titulo          String
+  descricao       String
+  impacto         String?  // baixo, medio, alto
+  
+  // Dados
+  dadosSuporte    Json?    // Dados que suportam o insight
+  
+  // Ação
+  acaoSugerida    String?
+  acaoExecutada   Boolean  @default(false)
+  
+  // Validacao
+  validado        Boolean  @default(false)
+  feedback        String?
+  
+  createdAt       DateTime @default(now())
+  
+  @@map("insights_agente")
+}

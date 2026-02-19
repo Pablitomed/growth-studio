@@ -1,0 +1,551 @@
+// Growth Studio - Sistema de Growth Marketing Agêntico
+// Arquitetura simplificada: 1 usuário (você) + múltiplos clientes com acesso via token
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./growth-studio.db"
+}
+
+// ============================================
+// CLIENTES (Empresas que você atende)
+// ============================================
+model Cliente {
+  id            String   @id @default(cuid())
+  
+  // Dados básicos
+  nome          String
+  empresa       String?
+  email         String?
+  telefone      String?
+  website       String?
+  industria     String?
+  
+  // Token de acesso único para o cliente
+  tokenAcesso   String   @unique @default(cuid())
+  
+  // ICP (Ideal Customer Profile)
+  icp           Json?    // { demografia, psicografia, dores, desejos, canais }
+  icpStatus     String   @default("pendente") // pendente, em_analise, definido, aprovado
+  
+  // Status e metadados
+  status        String   @default("ativo") // ativo, pausado, arquivado
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relacionamentos
+  campanhas        Campanha[]
+  conteudos        Conteudo[]
+  resultados       Resultado[]
+  decisoes         DecisaoHITL[]
+  logs             LogAgente[]
+  
+  // Novos relacionamentos 2026
+  geoMetrics       GEOMetrics[]
+  proimMetrics     PROIMMetrics[]
+  agenteExecucoes  AgenteExecucao[]
+  prontidao        ProntidaoEmocional[]
+  tierServico      TierServico?
+  conteudoGeo      ConteudoGEO[]
+  insights         InsightAgente[]
+  
+  @@map("clientes")
+}
+
+// ============================================
+// CAMPANHAS
+// ============================================
+model Campanha {
+  id            String   @id @default(cuid())
+  clienteId     String
+  cliente       Cliente  @relation(fields: [clienteId], references: [id])
+  
+  // Dados da campanha
+  nome          String
+  objetivo      String   // awareness, leads, vendas, retencao
+  plataformas   Json?    // ["meta", "google", "tiktok"]
+  budget        Float?
+  budgetAprovado Boolean @default(false)
+  
+  // Período
+  dataInicio    DateTime?
+  dataFim       DateTime?
+  
+  // Status
+  status        String   @default("rascunho") // rascunho, pendente_aprovacao, ativa, pausada, finalizada
+  
+  // Segmentação
+  publicoAlvo   Json?    // audiências, interesses, etc.
+  
+  // Métricas agregadas
+  metricas      Json?    // { impressoes, cliques, conversoes, gasto, roas }
+  
+  // Metadados
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  lancadaEm     DateTime?
+  
+  // Relacionamentos
+  conteudos     Conteudo[]
+  resultados    Resultado[]
+  decisoes      DecisaoHITL[]
+  
+  @@map("campanhas")
+}
+
+// ============================================
+// CONTEÚDOS (Criativos)
+// ============================================
+model Conteudo {
+  id            String   @id @default(cuid())
+  clienteId     String
+  cliente       Cliente  @relation(fields: [clienteId], references: [id])
+  campanhaId    String?
+  campanha      Campanha? @relation(fields: [campanhaId], references: [id])
+  
+  // Tipo e conteúdo
+  tipo          String   // copy, imagem, video, carousel, headline, cta
+  titulo        String?
+  corpo         String?
+  plataforma    String?  // meta, google, instagram, tiktok, linkedin
+  
+  // Mídia gerada
+  mediaUrl      String?
+  mediaTipo     String?  // imagem, video
+  
+  // Prompt usado para gerar
+  prompt        String?
+  
+  // Status
+  status        String   @default("rascunho") // rascunho, gerando, pendente_aprovacao, aprovado, rejeitado, publicado
+  
+  // Metadados
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  aprovadoEm    DateTime?
+  publicadoEm   DateTime?
+  
+  // Relacionamentos
+  decisoes      DecisaoHITL[]
+  
+  @@map("conteudos")
+}
+
+// ============================================
+// RESULTADOS / MÉTRICAS
+// ============================================
+model Resultado {
+  id            String   @id @default(cuid())
+  clienteId     String
+  cliente       Cliente  @relation(fields: [clienteId], references: [id])
+  campanhaId    String?
+  campanha      Campanha? @relation(fields: [campanhaId], references: [id])
+  
+  // Data e plataforma
+  data          DateTime
+  plataforma    String?
+  
+  // Métricas básicas
+  impressoes    Int?
+  cliques       Int?
+  conversoes    Int?
+  gasto         Float?
+  receita       Float?
+  
+  // Métricas calculadas
+  ctr           Float?   // click-through rate
+  cpc           Float?   // cost per click
+  cpa           Float?   // cost per acquisition
+  roas          Float?   // return on ad spend
+  
+  // Dados brutos (para análise)
+  dadosBrutos   Json?
+  
+  // Insights gerados pelo agente
+  insights      String?
+  
+  createdAt     DateTime @default(now())
+  
+  @@map("resultados")
+}
+
+// ============================================
+// SISTEMA HITL (Human-in-the-Loop)
+// ============================================
+model DecisaoHITL {
+  id            String   @id @default(cuid())
+  clienteId     String
+  cliente       Cliente  @relation(fields: [clienteId], references: [id])
+  campanhaId    String?
+  campanha      Campanha? @relation(fields: [campanhaId], references: [id])
+  conteudoId    String?
+  conteudo      Conteudo? @relation(fields: [conteudoId], references: [id])
+  
+  // Tipo de decisão
+  tipo          String   // aprovacao_budget, aprovacao_criativo, aprovacao_campanha, mudanca_estrategia, alerta_risco
+  
+  // Título e descrição
+  titulo        String
+  descricao     String?
+  
+  // Contexto da decisão (dados relevantes)
+  contexto      Json?    // dados que motivam a decisão
+  
+  // Recomendação do agente
+  recomendacao  String?
+  nivelRisco    String?  @default("baixo") // baixo, medio, alto
+  
+  // Status
+  status        String   @default("pendente") // pendente, em_analise, aprovado, rejeitado, revisao
+  
+  // Decisão do humano
+  decisao       String?  // aprovado, rejeitado, revisao
+  feedback      String?
+  decididoEm    DateTime?
+  
+  // Urgência
+  urgencia      String   @default("normal") // baixa, normal, alta, critica
+  
+  // Metadados
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("decisoes_hitl")
+}
+
+// ============================================
+// LOGS DOS AGENTES
+// ============================================
+model LogAgente {
+  id            String   @id @default(cuid())
+  clienteId     String?
+  cliente       Cliente? @relation(fields: [clienteId], references: [id])
+  
+  // Agente
+  agente        String   // pesquisa, analise, conteudo, plataformas, gestao, orchestrator
+  
+  // Tarefa
+  tarefa        String?
+  entrada       Json?
+  saida         Json?
+  
+  // Status
+  status        String   // pendente, executando, concluido, erro
+  erro          String?
+  
+  // Timing
+  iniciadoEm    DateTime?
+  concluidoEm   DateTime?
+  duracao       Int?     // em milissegundos
+  
+  // Custos
+  tokensUsados  Int?
+  custo         Float?
+  
+  createdAt     DateTime @default(now())
+  
+  @@map("logs_agentes")
+}
+
+// ============================================
+// CONFIGURAÇÕES DO SISTEMA
+// ============================================
+model Configuracao {
+  id            String   @id @default(cuid())
+  chave         String   @unique
+  valor         Json?
+  descricao     String?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("configuracoes")
+}
+
+// ============================================
+// WEBHOOKS N8N
+// ============================================
+model WebhookN8N {
+  id            String   @id @default(cuid())
+  nome          String
+  url           String
+  tipo          String   // entrada, saida
+  ativo         Boolean  @default(true)
+  
+  // Mapeamento
+  mapeamento    Json?
+  
+  ultimoDisparo DateTime?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("webhooks_n8n")
+}
+
+// ============================================
+// GEO - GENERATIVE ENGINE OPTIMIZATION
+// ============================================
+model GEOMetrics {
+  id              String   @id @default(cuid())
+  clienteId       String
+  cliente         Cliente  @relation(fields: [clienteId], references: [id])
+  
+  // Share of Model
+  shareOfModel    Float?   // Porcentagem de citações
+  totalCitacoes   Int?
+  minhasCitacoes  Int?
+  
+  // Por plataforma
+  chatGPT         Float?   // % de citações
+  perplexity      Float?
+  gemini          Float?
+  claude          Float?
+  
+  // Densidade de Fatos
+  densidadeScore  Float?   // 0-100
+  informationGain Float?   // Ganho de informação
+  
+  // Agregadores
+  g2Score         Float?
+  redditMentions  Int?
+  quoraMentions   Int?
+  
+  // Data
+  dataMedicao     DateTime @default(now())
+  createdAt       DateTime @default(now())
+  
+  @@map("geo_metrics")
+}
+
+// ============================================
+// PROIM - PREDICTIVE ROI MODEL
+// ============================================
+model PROIMMetrics {
+  id              String   @id @default(cuid())
+  clienteId       String
+  cliente         Cliente  @relation(fields: [clienteId], references: [id])
+  campanhaId      String?
+  
+  // Micro-sinais comportamentais
+  scrollDepth     Float?   // Profundidade média de rolagem
+  hoverTime       Float?   // Tempo médio de permanência
+  recorrencia     Int?     // Visualizações recorrentes
+  interacaoTools  Int?     // Uso de ferramentas interativas
+  
+  // Prontidão emocional
+  prontidaoScore  Float?   // 0-100
+  frustracaoCount Int?     // Usuários frustrados
+  ansiedadeCount  Int?     // Ansiedade pré-compra
+  engajamentoAlto Int?     // Alta intenção
+  
+  // Contexto
+  climaLocal      String?
+  horaDia         Int?
+  diaSemana       Int?
+  
+  // Previsão
+  probabilidadeConv Float? // % de probabilidade
+  conversoesEstim   Int?   // Conversões estimadas
+  roiEstimado       Float? // ROI previsto
+  
+  // Aprendizado
+  previsaoCorreta  Boolean?
+  diferencaReal    Float?
+  
+  dataMedicao     DateTime @default(now())
+  createdAt       DateTime @default(now())
+  
+  @@map("proim_metrics")
+}
+
+// ============================================
+// AGENTES ESPECIALIZADOS (15 agentes)
+// ============================================
+model AgenteExecucao {
+  id              String   @id @default(cuid())
+  clienteId       String?
+  cliente         Cliente? @relation(fields: [clienteId], references: [id])
+  
+  // Identificação
+  agenteTipo      String   // 15 tipos
+  nomeAgente      String
+  
+  // Tarefa
+  tarefa          String
+  descricao       String?
+  entrada         Json?
+  saida           Json?
+  
+  // Status
+  status          String   @default("pendente")
+  progresso       Int?     @default(0)
+  
+  // Timing
+  iniciadoEm      DateTime?
+  concluidoEm     DateTime?
+  duracao         Int?
+  
+  // Custos
+  tokensUsados    Int?
+  custoEstimado   Float?
+  
+  // Qualidade
+  scoreQualidade  Float?
+  feedbackHumano  String?
+  
+  // HITL
+  requerAprovacao Boolean  @default(false)
+  aprovadoPor     String?
+  aprovadoEm      DateTime?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@map("agente_execucoes")
+}
+
+// ============================================
+// PRONTIDÃO EMOCIONAL
+// ============================================
+model ProntidaoEmocional {
+  id              String   @id @default(cuid())
+  clienteId       String
+  cliente         Cliente  @relation(fields: [clienteId], references: [id])
+  
+  // Identificação
+  sessionId       String?
+  usuarioId       String?
+  
+  // Sinais comportamentais
+  scrollDepth     Float?
+  hoverTime       Float?
+  paginasVisitadas Int?
+  tempoTotal      Float?
+  
+  // Análise de sentimento
+  sentimento      String?  // frustrado, ansioso, engajado, neutro
+  confiancaSent   Float?
+  
+  // Contexto
+  fonte           String?
+  dispositivo     String?
+  
+  // Prontidão
+  nivelProntidao  String?  // baixo, medio, alto, critico
+  scoreProntidao  Float?
+  
+  // Ação recomendada
+  acaoRecomendada String?
+  acaoExecutada   Boolean  @default(false)
+  
+  createdAt       DateTime @default(now())
+  
+  @@map("prontidao_emocional")
+}
+
+// ============================================
+// TIERS DE SERVIÇO
+// ============================================
+model TierServico {
+  id              String   @id @default(cuid())
+  clienteId       String   @unique
+  cliente         Cliente  @relation(fields: [clienteId], references: [id])
+  
+  // Tier
+  tier            String   // assistivo, orchestrado, agentic, autonomo
+  
+  // Limites
+  agentesDisponiveis Json?
+  decisoesHITLSemana Int?
+  relatoriosMes   Int?
+  
+  // Features
+  geo             Boolean  @default(false)
+  proim           Boolean  @default(false)
+  chatIA          Boolean  @default(false)
+  apiAcesso       Boolean  @default(false)
+  
+  // Billing
+  valorMensal     Float?
+  cicloInicio     DateTime?
+  cicloFim        DateTime?
+  status          String   @default("ativo")
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@map("tier_servico")
+}
+
+// ============================================
+// CONTEÚDO GEO
+// ============================================
+model ConteudoGEO {
+  id              String   @id @default(cuid())
+  clienteId       String
+  cliente         Cliente  @relation(fields: [clienteId], references: [id])
+  
+  // Tipo
+  tipo            String
+  
+  // Conteúdo
+  titulo          String
+  conteudo        String
+  
+  // Otimização GEO
+  densidadeFatos  Int?
+  citacoesAutoridade Int?
+  estatisticas    Int?
+  termosTecnicos  Int?
+  
+  // Score
+  geoScore        Float?
+  citavel         Boolean  @default(false)
+  
+  // Performance
+  vezesCitado     Int?
+  ultimaCitacao   DateTime?
+  
+  // Status
+  status          String   @default("rascunho")
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@map("conteudo_geo")
+}
+
+// ============================================
+// INSIGHTS DOS AGENTES
+// ============================================
+model InsightAgente {
+  id              String   @id @default(cuid())
+  clienteId       String
+  cliente         Cliente  @relation(fields: [clienteId], references: [id])
+  agenteExecucaoId String?
+  
+  // Insight
+  tipo            String
+  titulo          String
+  descricao       String
+  impacto         String?
+  
+  // Dados
+  dadosSuporte    Json?
+  
+  // Ação
+  acaoSugerida    String?
+  acaoExecutada   Boolean  @default(false)
+  
+  // Validacao
+  validado        Boolean  @default(false)
+  feedback        String?
+  
+  createdAt       DateTime @default(now())
+  
+  @@map("insights_agente")
+}

@@ -1,0 +1,166 @@
+{
+  "name": "Growth Studio - Workflow Principal",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "growth-studio/webhook",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "id": "webhook-entrada",
+      "name": "Webhook Entrada",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "growth-studio-main"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Processar tipo de webhook\nconst tipo = $input.first().json.body.tipo;\nconst clienteId = $input.first().json.body.clienteId;\nconst payload = $input.first().json.body.payload;\n\nreturn {\n  tipo,\n  clienteId,\n  payload,\n  timestamp: new Date().toISOString()\n};"
+      },
+      "id": "processar-webhook",
+      "name": "Processar Webhook",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-resultado",
+              "leftValue": "={{ $json.tipo }}",
+              "rightValue": "resultado_campanha",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      },
+      "id": "switch-tipo",
+      "name": "Tipo de Webhook",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://growth-studio:3000/api/resultados",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "clienteId",
+              "value": "={{ $json.clienteId }}"
+            },
+            {
+              "name": "payload",
+              "value": "={{ $json.payload }}"
+            }
+          ]
+        }
+      },
+      "id": "salvar-resultado",
+      "name": "Salvar Resultado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://growth-studio:3000/api/decisoes",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "clienteId",
+              "value": "={{ $json.clienteId }}"
+            },
+            {
+              "name": "tipo",
+              "value": "={{ $json.payload.tipo }}"
+            },
+            {
+              "name": "titulo",
+              "value": "={{ $json.payload.titulo }}"
+            },
+            {
+              "name": "descricao",
+              "value": "={{ $json.payload.descricao }}"
+            }
+          ]
+        }
+      },
+      "id": "criar-decisao",
+      "name": "Criar Decisão HITL",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [850, 400]
+    }
+  ],
+  "connections": {
+    "Webhook Entrada": {
+      "main": [
+        [
+          {
+            "node": "Processar Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Processar Webhook": {
+      "main": [
+        [
+          {
+            "node": "Tipo de Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tipo de Webhook": {
+      "main": [
+        [
+          {
+            "node": "Salvar Resultado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Criar Decisão HITL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "Growth Studio"
+    }
+  ],
+  "pinData": {}
+}

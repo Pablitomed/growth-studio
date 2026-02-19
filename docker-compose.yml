@@ -1,0 +1,58 @@
+# Growth Studio - Docker Compose para Coolify
+version: '3.8'
+
+services:
+  growth-studio:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: growth-studio
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=file:/app/data/growth-studio.db
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL:-}
+      - N8N_API_KEY=${N8N_API_KEY:-}
+    volumes:
+      - growth-studio-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - coolify
+
+  # N8N para orquestração (opcional - use o N8N nativo da VPS se preferir)
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=${N8N_HOST:-localhost}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
+      - NODE_ENV=production
+      - WEBHOOK_URL=${N8N_WEBHOOK_URL:-http://localhost:5678/}
+      - GENERIC_TIMEZONE=${TIMEZONE:-America/Sao_Paulo}
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD:-admin123}
+    volumes:
+      - n8n-data:/home/node/.n8n
+    networks:
+      - coolify
+
+volumes:
+  growth-studio-data:
+  n8n-data:
+
+networks:
+  coolify:
+    external: true

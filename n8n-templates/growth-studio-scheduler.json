@@ -1,0 +1,119 @@
+{
+  "name": "Growth Studio - Agendamento de Relatórios",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24,
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "trigger-diario",
+      "name": "Diariamente às 8h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://growth-studio:3000/api/clientes",
+        "options": {}
+      },
+      "id": "buscar-clientes",
+      "name": "Buscar Clientes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Gerar resumo diário para cada cliente\nconst clientes = $input.first().json.clientes;\nconst resumos = clientes.map(cliente => {\n  const decisoesPendentes = cliente.decisoes?.filter(d => d.status === 'pendente').length || 0;\n  const campanhasAtivas = cliente.campanhas?.filter(c => c.status === 'ativa').length || 0;\n  \n  return {\n    clienteId: cliente.id,\n    nome: cliente.nome,\n    empresa: cliente.empresa,\n    decisoesPendentes,\n    campanhasAtivas,\n    precisaAtencao: decisoesPendentes > 0\n  };\n});\n\nreturn resumos.map(r => ({ json: r }));"
+      },
+      "id": "gerar-resumo",
+      "name": "Gerar Resumo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://growth-studio:3000/api/integrations/n8n/webhook",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "tipo",
+              "value": "relatorio_diario"
+            },
+            {
+              "name": "clienteId",
+              "value": "={{ $json.clienteId }}"
+            },
+            {
+              "name": "payload",
+              "value": "={{ $json }}"
+            }
+          ]
+        }
+      },
+      "id": "enviar-relatorio",
+      "name": "Enviar Relatório",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [850, 300]
+    }
+  ],
+  "connections": {
+    "Diariamente às 8h": {
+      "main": [
+        [
+          {
+            "node": "Buscar Clientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Clientes": {
+      "main": [
+        [
+          {
+            "node": "Gerar Resumo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gerar Resumo": {
+      "main": [
+        [
+          {
+            "node": "Enviar Relatório",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "Growth Studio"
+    },
+    {
+      "name": "Agendado"
+    }
+  ]
+}
