@@ -1,4 +1,5 @@
 # Growth Studio - Dockerfile para Coolify
+# Build cache bust: 2026-02-19-v2
 FROM oven/bun:1.3.4-alpine AS base
 
 # Instalar dependências necessárias
